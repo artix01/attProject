@@ -91,7 +91,7 @@ class Ui_AdministratorMainWindow(object):
             self.pushButton_view_strikes.setObjectName("pushButton_view_strikes")
 
             self.pushButton_view_strikes.clicked.connect(self.open_view_strikes)
-
+            self.pushButton_view_history.clicked.connect(self.open_lots_history_window)
             self.pushButton_view_processing_lots.clicked.connect(lambda: self.open_preview_lot_window(admin_info['contacts']))
         else:
             # Создаем все кнопки управления лотами
