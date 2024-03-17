@@ -27,13 +27,13 @@ bot = telebot.TeleBot(config["tg_token"])
 # Декоратор для проверки блокировки пользователя
 def check_blocked(func):
     def wrapper(*args, **kwargs):
-        if len(args) > 0 and hasattr(args[0], "message"):
-            message = args[0].message  # Получаем объект сообщения из колбэка
-            user_id = message.from_user.id
-            if dbf.is_blocked(user_id):
-                bot.send_message(user_id, "Ваш доступ к боту ограничен. Обратитесь к администратору.")
-                return
-        return func(*args, **kwargs)  # Передаем все аргументы в оборачиваемую функцию
+        message = args[0]  # Первый аргумент - message
+        user_id = message.from_user.id
+        if dbf.is_blocked(user_id):
+            bot.send_message(user_id, "Ваш доступ к боту ограничен. Обратитесь к администратору.")
+            return
+        else:
+            return func(*args, **kwargs)  # Передаем все аргументы в оборачиваемую функцию
     return wrapper
 
 # Проверка новый ли юзер
@@ -107,9 +107,13 @@ def channel_create_lot(lot_info=None, message_id=None, new_ninja=None):
         image = images[0]
     with open(image, 'rb') as photo:
         if message_id:
-            bot.edit_message_caption(chat_id=channel_id, caption=lot_card_text, message_id=message_id,
-                                     reply_markup=keyboard,
-                                     parse_mode="HTML")
+            try:
+                bot.edit_message_caption(chat_id=channel_id, caption=lot_card_text, message_id=message_id,
+                                        reply_markup=keyboard,
+                                        parse_mode="HTML")
+            except telebot.apihelper.ApiTelegramException as e:
+                if "message is not modified" in str(e):
+                    pass
         else:
             sent_message = bot.send_photo(chat_id=channel_id, photo=photo, caption=lot_card_text, reply_markup=keyboard, parse_mode="HTML")
             dbf.update("lots", ("message_id", sent_message.message_id), ("id", lot_info[0]))
@@ -248,10 +252,9 @@ def calculate_min_increase(current_bid):
     base_increase = 20  # Базовое значение минимального повышения
     thresholds = [200]  # Пороговые значения
     increase_ratio = 0.1  # Коэффициенты для изменения правил
-
     min_increase = base_increase
     for i, threshold in enumerate(thresholds):
-        if current_bid > threshold:
+        if int(current_bid) > threshold:
             thresholds.append(threshold*2)
             # Если текущая ставка превышает пороговое значение, применяем новые правила
             min_increase = max(current_bid * increase_ratio, min_increase)
@@ -734,7 +737,7 @@ else:
                 for lot in ended_lots:
                     admin_balance = dbf.select("finances", "current_balance",
                                                "WHERE id = (SELECT id FROM finances ORDER BY id DESC LIMIT 1)", ())[0][0]
-                    lot_current_bet = dbf.select("lots", "current_bet", "WHERE id = ?", (lot[0],))[0]
+                    lot_current_bet = dbf.select("lots", "current_bet, start_price", "WHERE id = ?", (lot[0],))[0]
                     if lot_current_bet[0] == None:
                         lot_current_bet = lot_current_bet[1]
                     else:

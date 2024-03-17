@@ -5,6 +5,7 @@ from PyQt5.QtGui import QPixmap
 import database_functions as dbf
 from telegram_bot import channel_create_lot, delete_lot
 import shutil
+from datetime import datetime, timedelta
 
 
 
@@ -424,7 +425,7 @@ class RecreateLotDialog(QtWidgets.QDialog):
                     break
 
             if selected_lot:
-                preview_dialog = LotPreviewDialog(selected_lot, approver_username)
+                preview_dialog = LotPreviewDialog(selected_lot, approver_username, recreate=True)
                 preview_dialog.exec_()
                 self.accept()  # Закрываем диалоговое окно после завершения операции
             else:
@@ -493,7 +494,7 @@ class AuctionHistoryDialog(QtWidgets.QDialog):
 
 
 class LotPreviewDialog(QtWidgets.QDialog):
-    def __init__(self, lot_info, approver_username=None):
+    def __init__(self, lot_info, approver_username=None, recreate=None):
         super().__init__()
         self.setWindowTitle("Предварительный просмотр лота")
         # Создаем макет окна
@@ -531,15 +532,41 @@ class LotPreviewDialog(QtWidgets.QDialog):
             # Создаем кнопки "Одобрить" и "Отклонить"
             approve_button = QtWidgets.QPushButton("Создать лот")
             reject_button = QtWidgets.QPushButton("Отклонить")
-            approve_button.clicked.connect(lambda : self.approve_lot(lot_info, approver_username))
+            if recreate:
+                approve_button.clicked.connect(lambda : self.approve_lot(lot_info, approver_username, recreate))
+            else:
+                approve_button.clicked.connect(lambda: self.approve_lot(lot_info, approver_username))
             reject_button.clicked.connect(lambda : self.reject_lot(lot_info, approver_username))
             layout.addWidget(approve_button)
             layout.addWidget(reject_button)
 
         self.setLayout(layout)
 
-    def approve_lot(self, lot_info, approver_username):
+    def approve_lot(self, lot_info, approver_username, recreate=None):
         if not lot_info[10] or lot_info[10] == None:
+            if recreate:
+                images = lot_info[1]
+                start_price = lot_info[2]
+                seller_link = lot_info[3]
+                location = lot_info[4]
+                description = lot_info[5]
+                start_time_n = datetime.now()
+                end_time_n = start_time_n + timedelta(days=7)
+                start_time = start_time_n.strftime("%Y-%m-%d %H:%M:%S")
+                end_time = end_time_n.strftime("%Y-%m-%d %H:%M:%S")
+                status = "одобрен"
+                attached_files = lot_info[9]
+                creator_username = lot_info[16]
+                approver = f"recreate from lot_id: {lot_info[0]}"
+                dbf.insert("lots",
+                           (
+                               "images, start_price, seller_url, location, description, start_time, end_time, status, attached_files, lot_creator, approver"),
+                           (images, start_price, seller_link, location, description, start_time, end_time, status,
+                            attached_files, creator_username, approver))
+                new_lot_info = dbf.select("lots", "*", "WHERE id = (SELECT MAX(id) FROM lots)", ())[0]
+                channel_create_lot(lot_info=new_lot_info)
+                self.accept()
+                return
             channel_create_lot(lot_info=lot_info)
             dbf.update("lots", ("status", "одобрен"), ("id", lot_info[0]))
             dbf.update("lots", ("approver", approver_username), ("id", lot_info[0]))

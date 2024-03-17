@@ -62,8 +62,8 @@ def is_blocked(user_id):
     Returns:
         bool: True, если пользователь заблокирован, False в противном случае.
     """
-    user_info = select("users", "status", "WHERE user_id = ?", (user_id,))[0][0]
+    user_info = select("users", "status", "WHERE user_id = ?", (user_id,))
     if user_info:
-        return bool(user_info == "banned")
+        return bool(user_info[0][0] == "banned")
     else:
         return False
