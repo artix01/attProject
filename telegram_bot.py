@@ -225,8 +225,8 @@ def delete_lot(lot_id):
     if participate_users:
         for user in participate_users:
             user_message_id = json.loads(user[3])
+            bot.edit_message_caption(chat_id=user[5], message_id=user_message_id[str(lot_id)], caption="Лот был снят с аукциона приносим свои извинения.")
             del user_message_id[lot_id]
-            bot.edit_message_caption(chat_id=user[5], message_id=user_message_id[lot_id], caption="Лот был снят с аукциона приносим свои извинения.")
             dbf.update("users", ("lots_ids", json.dumps(user_message_id)), ("id", user[0]))
     bot.delete_message(chat_id=static_channel_id, message_id=lot_message_id)
     return

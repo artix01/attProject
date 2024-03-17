@@ -292,7 +292,6 @@ class DeleteLotDialog(QtWidgets.QDialog):
                 dbf.update("lots", ("status", "снят с аукциона"), ('id', lot_id))
                 dbf.insert("finances", "current_balance, lot_id, count, comment", (new_current_balance, lot_id,
                                                                                    f"-{five_percent}", "Удаление лота с аукциона."))
-                QtWidgets.QMessageBox.warning(self, "Ошибка", "Произошла ошибка при удалении лота.")
             QtWidgets.QMessageBox.information(self, "Успех", "Лоты успешно удалены.")
             self.accept()
         else:
